@@ -1,0 +1,9 @@
+ConnectWise Automate MCP Server
+Copyright 2026 MSPbots.ai
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+"ConnectWise" and "ConnectWise Automate" are trademarks of their respective
+owner. This project is an independent integration that calls the documented
+ConnectWise Automate REST API; it contains no ConnectWise source code and is
+not affiliated with or endorsed by ConnectWise.
