@@ -49,7 +49,7 @@ a non-https server URL or an unknown auth method gets HTTP 400.
 
 ## Tools
 
-All tools return a JSON string. List tools take `limit` (default 50) and `skip` (a multiple of
+All tools return a JSON string. List tools take `limit` (default 50, max 200) and `skip` (a multiple of
 `limit`; Automate pages by page number) and return the records plus
 `{count, skip, has_more, next_skip}`.
 
@@ -150,6 +150,10 @@ uv run pytest
   gateway's limit). An unfinished run returns `completed: false` with ids to check later.
 - **No interactive prompts.** Older versions asked the user for a client filter before an
   unfiltered list, which a stateless gateway cannot relay; lists now page instead.
+- **Result size exception (SOP 2.5).** `cwautomate_computers_search` and
+  `cwautomate_scripts_history` have no paging (no `skip`), so they keep a maximum of 1000; results
+  are still cut to 20,000 characters with a truncation notice. The paged lists take at most 200
+  per call.
 - **Alerts** are read-only in the Automate API (no acknowledge / close).
 
 ## License

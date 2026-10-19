@@ -27,6 +27,7 @@ from ._common import (
     ClientFactory,
     ComputerId,
     Limit,
+    PageLimit,
     ScriptParameters,
     Skip,
     WaitSeconds,
@@ -152,7 +153,7 @@ def register(mcp: FastMCP, client_factory: ClientFactory) -> None:
     async def cwautomate_scripts_list(
         folder_id: Annotated[int | None, Field(description="Only scripts in this folder.", ge=1)] = None,
         search: Annotated[str | None, Field(description="Text the script name contains.")] = None,
-        limit: Limit = None,
+        limit: PageLimit = None,
         skip: Skip = None,
     ) -> str:
         """List scripts in the Automate script catalog, optionally by folder or name."""

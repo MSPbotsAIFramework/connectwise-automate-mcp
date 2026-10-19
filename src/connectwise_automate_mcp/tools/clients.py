@@ -25,7 +25,7 @@ from ._common import (
     WRITES,
     WRITES_IDEMPOTENT,
     ClientFactory,
-    Limit,
+    PageLimit,
     Skip,
     compact,
     list_result,
@@ -44,7 +44,7 @@ def _client_fields(name: str | None, city: str | None, state: str | None, zip: s
 
 def register(mcp: FastMCP, client_factory: ClientFactory) -> None:
     @mcp.tool(annotations=READ_ONLY)
-    async def cwautomate_clients_list(limit: Limit = None, skip: Skip = None) -> str:
+    async def cwautomate_clients_list(limit: PageLimit = None, skip: Skip = None) -> str:
         """List clients (customers) with their ids, names and contact details."""
 
         async def action(client: AutomateClient) -> dict:

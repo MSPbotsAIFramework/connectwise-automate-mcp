@@ -97,6 +97,20 @@ def test_wait_is_capped_below_gateway_timeout(tools):
     assert maximum <= 100
 
 
+@pytest.mark.parametrize(
+    "name", ["cwautomate_computers_list", "cwautomate_clients_list", "cwautomate_alerts_list", "cwautomate_scripts_list"]
+)
+def test_paging_tools_cap_limit_at_200(tools, name):
+    schema = tools[name].inputSchema["properties"]["limit"]
+    assert next(a["maximum"] for a in schema["anyOf"] if "maximum" in a) == 200
+
+
+@pytest.mark.parametrize("name", ["cwautomate_computers_search", "cwautomate_scripts_history"])
+def test_single_page_tools_keep_limit_1000(tools, name):
+    schema = tools[name].inputSchema["properties"]["limit"]
+    assert next(a["maximum"] for a in schema["anyOf"] if "maximum" in a) == 1000
+
+
 def test_instructions_budget():
     assert len(INSTRUCTIONS) <= 1500
 

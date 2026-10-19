@@ -28,6 +28,7 @@ from ._common import (
     ComputerId,
     Limit,
     OptionalClientId,
+    PageLimit,
     ScriptParameters,
     Skip,
     WaitSeconds,
@@ -96,7 +97,7 @@ def register(mcp: FastMCP, client_factory: ClientFactory) -> None:
         client_id: OptionalClientId = None,
         location_id: Annotated[int | None, Field(description="Automate location id.", ge=1)] = None,
         status: Annotated[Literal["online", "offline", "all"] | None, Field(description="Agent status (default all).")] = None,
-        limit: Limit = None,
+        limit: PageLimit = None,
         skip: Skip = None,
     ) -> str:
         """List computers (agents), optionally for one client or location, or only online / offline ones."""

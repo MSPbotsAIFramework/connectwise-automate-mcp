@@ -22,8 +22,8 @@ from ..api_client import AutomateClient
 from ._common import (
     READ_ONLY,
     ClientFactory,
-    Limit,
     OptionalClientId,
+    PageLimit,
     Skip,
     and_conditions,
     compact,
@@ -39,7 +39,7 @@ def register(mcp: FastMCP, client_factory: ClientFactory) -> None:
         computer_id: Annotated[int | None, Field(description="Only alerts of this computer.", ge=1)] = None,
         client_id: OptionalClientId = None,
         severity: Annotated[int | None, Field(description="Only alerts with this severity id (Severity.Id).")] = None,
-        limit: Limit = None,
+        limit: PageLimit = None,
         skip: Skip = None,
     ) -> str:
         """List alerts, optionally for one computer, client or severity.

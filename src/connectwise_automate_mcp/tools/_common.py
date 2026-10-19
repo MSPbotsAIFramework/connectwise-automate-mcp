@@ -45,7 +45,9 @@ NOT_CONFIGURED = error_envelope(
 
 DEFAULT_LIMIT = 50
 
-Limit = Annotated[int | None, Field(description=f"Results per page, 1-1000 (default {DEFAULT_LIMIT}).", ge=1, le=1000)]
+PageLimit = Annotated[int | None, Field(description=f"Results per page, 1-200 (default {DEFAULT_LIMIT}).", ge=1, le=200)]
+# For tools without skip: they return one page only, so they keep the larger maximum.
+Limit = Annotated[int | None, Field(description=f"Results to return, 1-1000 (default {DEFAULT_LIMIT}).", ge=1, le=1000)]
 Skip = Annotated[int | None, Field(description="Results to skip; use a multiple of limit (next_skip from the last page).", ge=0)]
 ComputerId = Annotated[int, Field(description="Automate computer id.", ge=1)]
 OptionalClientId = Annotated[int | None, Field(description="Automate client id.", ge=1)]
