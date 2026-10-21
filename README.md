@@ -45,7 +45,8 @@ header. A 401 gets a fresh token once. Values that look like unresolved template
 are treated as missing.
 
 A request to `/mcp` without the four required headers gets HTTP 401 naming the missing ones;
-a non-https server URL or an unknown auth method gets HTTP 400.
+a non-https server URL or an unknown auth method does not block `tools/list`; tool calls then
+return an `invalid_argument` error and the server URL is never called.
 
 ## Tools
 

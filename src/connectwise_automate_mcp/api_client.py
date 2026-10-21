@@ -96,6 +96,9 @@ class AutomateCredentials:
     password: str
     two_factor_code: str | None = None
     auth_method: AuthMethod | None = None
+    # Set when a header value is malformed: tools then return invalid_argument
+    # instead of calling Automate, while tools/list still works.
+    header_error: str | None = None
 
     @property
     def resolved_auth_method(self) -> AuthMethod:
@@ -120,10 +123,14 @@ class AutomateClient:
     def __init__(self, credentials: AutomateCredentials, http_client: httpx.AsyncClient | None = None):
         self._credentials = credentials
         self._http = http_client
+        self.header_error = credentials.header_error
         self.server_url = credentials.server_url.rstrip("/")
         self._token: str | None = None
 
     def _client(self) -> httpx.AsyncClient:
+        if self.header_error:
+            # A malformed header (e.g. a non-https server URL) must never reach the network.
+            raise AutomateError(400, self.header_error)
         return self._http or _get_shared_http_client()
 
     def _url(self, path: str, version: str = "v1") -> str:

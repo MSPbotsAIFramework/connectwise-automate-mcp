@@ -39,6 +39,7 @@ REQUIRED_HEADERS = [HEADER_SERVER, HEADER_CLIENT_ID, HEADER_USERNAME, HEADER_PAS
 _PLACEHOLDER = re.compile(r"^\$\{.*\}$")
 _API_SUFFIX = re.compile(r"/(cwa(/api(/v\d+)?)?|automate)/?$", re.IGNORECASE)
 _LOCAL_HOSTS = {"localhost", "127.0.0.1"}
+_INVALID_URL = "https://invalid.example.com"
 
 # Per-request isolation: the middleware sets these for the duration of one
 # HTTP request and resets them in `finally`. Nothing credential-related is
@@ -106,7 +107,9 @@ class GatewayCredentialsMiddleware:
     """Reads the Automate headers on /mcp requests into the request context.
 
     Needs X-Cwa-Server, X-Cwa-Client-Id, X-Cwa-Username and X-Cwa-Password;
-    otherwise 401.
+    otherwise 401. A malformed server URL or auth method does not block the
+    request (tools/list must work with any values); tools report it and the
+    server URL is never called.
     """
 
     def __init__(self, app: ASGIApp):
@@ -138,12 +141,16 @@ class GatewayCredentialsMiddleware:
 
         server_url = normalize_server_url(values[HEADER_SERVER] or "")
         auth_method = (header(HEADER_AUTH_METHOD) or "").lower() or None
+        errors = []
         if server_url is None:
-            await self._reject(scope, receive, send, f"{HEADER_SERVER} must be an https URL such as https://your-server.hostedrmm.com")
-            return
+            errors.append(f"{HEADER_SERVER} must be an https URL such as https://your-server.hostedrmm.com")
+            # Harmless stand-in so the client can be built; the client refuses
+            # every request while header_error is set.
+            server_url = _INVALID_URL
         if auth_method not in (None, "integrator", "user"):
-            await self._reject(scope, receive, send, f"{HEADER_AUTH_METHOD} must be integrator or user")
-            return
+            errors.append(f"{HEADER_AUTH_METHOD} must be integrator or user")
+            auth_method = None
+        header_error = "; ".join(errors) or None
 
         credentials = AutomateCredentials(
             server_url=server_url,
@@ -152,6 +159,7 @@ class GatewayCredentialsMiddleware:
             password=values[HEADER_PASSWORD] or "",
             two_factor_code=header(HEADER_2FA),
             auth_method=auth_method,  # type: ignore[arg-type]
+            header_error=header_error,
         )
         request_id = (request.headers.get("x-request-id") or "").strip()[:64] or uuid.uuid4().hex[:12]
         creds_token = _credentials_var.set(credentials)
@@ -161,10 +169,6 @@ class GatewayCredentialsMiddleware:
         finally:
             _credentials_var.reset(creds_token)
             request_id_var.reset(rid_token)
-
-    @staticmethod
-    async def _reject(scope: Scope, receive: Receive, send: Send, message: str) -> None:
-        await JSONResponse({"error": "Invalid header", "message": message}, status_code=400)(scope, receive, send)
 
 
 def create_mcp_server(settings: Settings | None = None) -> FastMCP:

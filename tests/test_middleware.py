@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Credential middleware: 401/400 on bad headers, per-request isolation."""
+"""Credential middleware: 401 on missing headers, deferred format errors, per-request isolation."""
 
 import asyncio
 
@@ -19,6 +19,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from connectwise_automate_mcp.__main__ import build_http_app
+from connectwise_automate_mcp.api_client import AutomateError
 from connectwise_automate_mcp.server import (
     GatewayCredentialsMiddleware,
     _credentials_var,
@@ -63,14 +64,38 @@ def test_placeholder_values_count_as_missing():
     assert resp.status_code == 401
 
 
-@pytest.mark.parametrize(
-    "extra",
-    [{"X-Cwa-Server": "http://automate.example.com"}, {"X-Cwa-Auth-Method": "token"}],
-)
-def test_bad_values_return_400(extra):
+def test_placeholder_headers_still_list_tools():
+    # The admin console refreshes the tool catalog with placeholder header values.
+    names = list(CREDS) + ["X-Cwa-2fa", "X-Cwa-Auth-Method"]
     with _client() as client:
-        resp = client.post("/mcp", json=LIST_TOOLS, headers=MCP_HEADERS | CREDS | extra)
-    assert resp.status_code == 400
+        resp = client.post("/mcp", json=LIST_TOOLS, headers=MCP_HEADERS | {h: "placeholder" for h in names})
+    assert resp.status_code == 200
+    assert "cwautomate_computers_list" in resp.text
+
+
+@pytest.mark.parametrize(
+    "extra,message",
+    [
+        ({"X-Cwa-Server": "http://automate.example.com"}, "X-Cwa-Server must be an https URL"),
+        ({"X-Cwa-Auth-Method": "token"}, "X-Cwa-Auth-Method must be integrator or user"),
+    ],
+)
+def test_bad_values_are_reported_by_tools(extra, message):
+    call = {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "cwautomate_status", "arguments": {}}}
+    with _client() as client:
+        resp = client.post("/mcp", json=call, headers=MCP_HEADERS | CREDS | extra)
+    assert resp.status_code == 200
+    assert '\\"invalid_argument\\"' in resp.text and message in resp.text
+
+
+def test_bad_values_are_combined_and_never_reach_the_network():
+    seen = _run_middleware(_raw({"X-Cwa-Server": "http://automate.example.com", "X-Cwa-Auth-Method": "token"}))
+    client = seen["client"]
+    assert "; X-Cwa-Auth-Method must be integrator or user" in client.header_error
+    client._http = object()  # any network use would fail loudly
+    with pytest.raises(AutomateError) as exc:
+        asyncio.run(client.get("Computers"))
+    assert exc.value.status_code == 400
 
 
 def test_tools_list_over_http():
